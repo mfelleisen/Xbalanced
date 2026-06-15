@@ -57,6 +57,11 @@ The resulting files are deposited in the Checks/ directory.
   have been replaced with plain amounts to decouple this benchmark
   from the Xmanage one. 
   
+  This is a grown data file. Unlike for xmanage, I wanted to record
+  the data in a program file. I did not expect to keep this file for
+  30+ years. What is now visible is a vastly shortened, distorted
+  version (See comments in the contract for the data from this file.) 
+  
 - api-keys-public.rkt -- just that
 
 ## Program Files for Balancing 
