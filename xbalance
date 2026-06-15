@@ -1,0 +1,83 @@
+#! /bin/sh
+#| -*- racket -*-
+exec racket -tm "$0" -- ${1+"$@"}
+|#
+#lang racket
+
+(provide
+ ;; USAGE `./xbalance
+ ;; compile a complete assessment of my current financial possessions, present it as HTML and S-expr
+ ;; ASSUME a sever is available 
+ main)
+
+;; ---------------------------------------------------------------------------------------------------
+(require Xbalanced/private/assessment)
+(require Xbalanced/private/api-keys-public)
+(require Xbalanced/data)
+(require Xbalanced/private/dates)
+(require Xbalanced/private/render-as-html)
+(require Xbalanced/private/render-as-sexpr)
+(require Xbalanced/private/render-index)
+(require Xbalanced/private/quotes)
+(require xml/xml)
+(require browser/external)
+
+(module+ test
+  (require (submod Xbalanced/private/assessment examples))
+  (require (submod Xbalanced/private/representations examples))
+  (require rackunit))
+
+;; ---------------------------------------------------------------------------------------------------
+(define (main . _ignored)
+  (printf "starting client\n")
+  (define file-name   (date->filename WHERE))
+  (define assessments (compute-assessments stocks funds etfs matthias-iras matthias-sep accounts))
+  (print-sexpr file-name assessments)
+  (print-html file-name assessments)
+  (print-index "Checks/index.html"))
+
+#; {type Security* = [Listof 1Security]}
+
+#; {Security* Security* Security*Security* Security* Security* Accounts 
+              [:cache ([Listof String] -> PriceTable)] -> Assessment}
+;; the cache parameter is for testing only
+(define (compute-assessments stocks funds etfs iras sep accounts #:cache (c stock-quote*/))
+  [define sum-stocks   (assess-base-profit-value stocks stock-quote/ #:cache c)]
+  [define sum-funds    (assess-base-profit-value funds fund-quote/ #:cache c)]
+  [define sum-etfs     (assess-base-profit-value etfs  etf-quote/ #:cache c)]
+  [define sum-m-iras   (assess-base-profit-value iras fund-quote/ #:cache c)]
+  [define sum-m-sep    (assess-base-profit-value sep fund-quote/ #:cache c)]
+  [define sum-accounts (assess-accounts accounts)]
+  ;; IN: 
+  (assessment sum-accounts sum-stocks sum-funds sum-etfs sum-m-iras sum-m-sep))
+
+(define (stock-quote*/ los) (stock-quote* los STOCK-API STOCK-KEY))
+(define (stock-quote/ sym name) (stock-quote sym name STOCK-API STOCK-KEY))
+(define (fund-quote/ sym name) (fund-quote sym name FUND-API))
+(define (etf-quote/ sym name) (etf-quote sym name ETF-API))
+
+
+#; {PathString Assessment -> Void}
+(define (print-sexpr file-name assessment)
+  (with-output-to-file file-name (render-as-sexpr assessment) #:exists 'truncate))
+
+#; {PathString Assessment -> Void}
+(define (print-html file-name assessments)
+  (define page:xexpr (render-as-html assessments))
+  (define out (string-append file-name ".html"))  
+  (with-output-to-file out
+    (lambda () (display-xml/content (xexpr->xml page:xexpr))) 
+    #:exists 'replace)
+  (send-url (string-append "file:///" (~a (current-directory) out))))
+
+#; {PathString -> Void}
+(define (print-index index-name)
+  (with-output-to-file index-name [print-index-lines (make-index)] #:exists 'replace))
+
+;; ---------------------------------------------------------------------------------------------------
+(module+ test
+  (define (cache1 los)
+    (hash "S" 10 ));"T" 20))
+
+  (define t* (take s* 1))
+  (check-within (compute-assessments t* t* t* t* t* (take a2 2) #:cache cache1) complete-ass .1))

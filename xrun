@@ -1,0 +1,39 @@
+#! /bin/sh
+#| -*- racket -*-
+exec racket -tm "$0" -- ${1+"$@"}
+|#
+#lang racket
+
+(provide
+ ;; USAGE `./xrun
+ ;; starts a fake server, the actual assessment client (xbalance), and delivers all three views 
+ main)
+
+;; ---------------------------------------------------------------------------------------------------
+(require (rename-in "x-fake-server" [main start-server]))
+(require (rename-in "xbalance" [main start-client]))
+
+(module+ test
+  (require Xbalanced/private/quotes)
+  (require rackunit))
+
+;; ---------------------------------------------------------------------------------------------------
+(define (main (start-client start-client) . _ignored)
+  (start-server 'go-threaded)
+  (sleep 2)
+  (start-client)
+  (void))
+
+;; ---------------------------------------------------------------------------------------------------
+(module+ test
+  ;; fwiw, this test failed to uncover a problem with my fake HEADER in the fake server module
+  ;; and not it isn't really a full test (yet)
+  (define (test-of-quotes.rkt)
+    (eprintf "testing started\n")
+    (define request '(("F" "Forld") ("G" "Google") ("H" "Haliburton")))
+    (check-equal? (length (hash->list (stock-quote* request))) (length request))
+    (check-match (etf-quote "NAESY" "SmallCap") (pregexp "retrieved"))
+    (check-match (fund-quote "NAESX" "SmallCap") (pregexp "retrieved")))
+
+  (main test-of-quotes.rkt))
+

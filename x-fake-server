@@ -1,0 +1,119 @@
+#! /bin/sh
+#| -*- racket -*-
+exec racket -tm "$0" -- ${1+"$@"}
+|#
+#lang racket
+
+(provide
+ ;; USAGE `./xrun
+ ;; starts a fake server, the actual assessment client (xbalance), and delivers all three views 
+ main)
+
+;; ---------------------------------------------------------------------------------------------------
+(require Xbalanced/private/common)
+(require json)
+
+(require SwDev/Debugging/spy)
+
+;; ---------------------------------------------------------------------------------------------------
+(define (main (threaded? #false))
+  (eprintf "starting server\n")
+  (if threaded? (thread [server PORT]) [[server PORT]]))
+
+#; {PortNumber -> Void}
+;; fake web service on given port @
+(define [(server p#)]
+  (define listener (tcp-listen p# 30 #true))
+  (let loop ()
+    (define-values (in out) (tcp-accept listener))
+    (thread (spawn-service in out))
+    (loop)))
+
+;; ---------------------------------------------------------------------------------------------------
+#;{InputPort OutputPort -> Void}
+;; service one request 
+(define [(spawn-service in out)]
+  (define next (read-line in)) ;; simplistic, no time out
+  (match next 
+    [(? eof-object?) (void)]
+    [(regexp "/ETF=(.*) " (list all sym))
+     (write-price out (write-etf-price out sym))]
+    [(regexp "/FUND=(.*) " (list all sym))
+     (write-price out (write-fund-price out sym))]
+    [(regexp "/STOCKS=(.*) " (list all sym*))
+     (write-price out (write-stock-response out sym*))]))
+
+#; {OutputPort (-> Void) -> Void}
+(define (write-price out f)
+  (write-get-header out)
+  (f)
+  (newline out)
+  (flush-output out)
+  (close-output-port out))
+
+#; {OutputPort -> Void}
+(define (write-get-header out)
+  (define foo
+    `["HTTP/1.1 200 OK"
+      "Date: Wed, 03 Jun 2026 18:57:00 GMT"
+      "Server: Apache/2.4.41 (Ubuntu)"
+      "Content-Type: text/html; charset=UTF-8"
+      "Content-Length: 1280"
+      "Connection: close"
+      ""])
+  (for ((f foo))
+    (display f out)
+    (newline out)
+    (flush-output out)))
+
+#; {OutputPort PositiveReal -> Void}
+(define [(write-fund-price out p)]
+  (fprintf out "<p>.*;~a<span>" (get-fund (string->symbol p))))
+
+#; {OutputPort PositiveReal -> Void}
+(define [(write-etf-price out p)]
+  (fprintf out "<td>~a</td>" (get-etf (string->symbol p))))
+
+#; {OutputPort PositiveReal String -> Void}
+(define [(write-stock-response out sym*)]
+  (define price*   (get-stock* sym*))
+  (define response (hash 'quoteResponse (hash 'result price* 'error null)))
+  (write-json response out))
+
+;; ---------------------------------------------------------------------------------------------------
+#; {Symbol -> Price}
+(define (get-etf ticker-symbol)
+  (case ticker-symbol
+    [(ETFONE) 10.01]
+    [(ETFTWO) 20.20]
+    [else   #false]))
+
+#; {Symbol -> Price}
+(define (get-fund ticker-symbol)
+  (case ticker-symbol
+    [(MFONE) 30.31]
+    [(MFTWO) 40.04]
+    [(MFTHREE) 55.55]
+    [(MFFOUR) 55.55]
+    [(MFFIVE)  6.66]
+    [(MFA)  1.11]
+    [(MFAA)21.11]
+    [(MFBA)31.11]
+    [(MFB)  2.22]
+    [(MFD)  3.33]
+    [(MFE)  4.33]
+    [(MFF)  5.33]
+    [else  #false]))
+
+#; {String -> [Listof [Hashof 'regularMarketPrice Price 'symbol String]]}
+;; ASSUME ticker-symbol* matches ((.*),...,(.*))
+;; each (.*) is a stock symbol and the result table contains "objects"
+;; whose 'symbol attribyte is a subset of those given
+(define (get-stock* ticker-symbol*)
+  (define sym-list (string-split ticker-symbol* ","))
+  (for*/list ([s sym-list] [p (in-value (get-stock (string->symbol s)))] #:when p)
+    (hash 'regularMarketPrice p 'symbol s)))
+
+#; {Symbol -> Price}
+(define (get-stock ticker-symbol)
+  (exact->inexact (+ 1 (random 100))))
