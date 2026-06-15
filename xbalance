@@ -11,8 +11,9 @@ exec racket -tm "$0" -- ${1+"$@"}
  main)
 
 ;; ---------------------------------------------------------------------------------------------------
+(require Xbalanced/api-keys-public)
+
 (require Xbalanced/private/assessment)
-(require Xbalanced/private/api-keys-public)
 (require Xbalanced/data)
 (require Xbalanced/private/dates)
 (require Xbalanced/private/render-as-html)

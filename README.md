@@ -2,8 +2,6 @@
 
 a benchmark 
 
-## Goal 
-
 ## Executables 
 
 - xbalance is the original script turned into a program 
@@ -19,16 +17,12 @@ a benchmark
 ```
 ./xbalance 
 ``` 
-
-starts the 'fake-web' server and the actual client, 'balance'. 
-The client retrieves the "current price" for securities from the 
+retrieves the "current price" for securities from the 
 fake server, assess the value of securities and cash-like accounts, 
 and displays those both as readable S-expressions and as HTML. 
 
-The `xbalance` script could be re-directed to connect to actual 
-APIs by replacing "quotes.rkt" with my own version plus the 
-insertion of an API key. (It would also assume a real data 
-file.) 
+The `xbalance` script could be re-directed to connect to actual APIs
+by replacing "api-keys-public.rkt" with my private version. 
 
 ## Benchmark Usage 
 
