@@ -7,7 +7,11 @@ a benchmark
 - xbalance is the original script turned into a program 
 
 - x-fake-server is really just a fake web server. Its answers
-  simulate the APIs that the quotes library expects. 
+  simulate the APIs that the quotes library expects. To make 
+  sure it is compatible with the actual API, I have made sure not to
+  change "qyotes,rkt" other than taking out the API URLs and API keys. 
+  (The fake server sends back random prices for stocks, but fixed ones
+  for mutual funds and etfs). 
   
 - xrun is the benchmark entry point. 
 
@@ -48,6 +52,13 @@ that the TCP port gets freed up again.
 ## Results 
 
 The resulting files are deposited in the Checks/ directory. 
+
+The most recent html file is opened via the browser library. 
+If you want to disable this behavior, comment out the last 
+line of `print-html` in "xbalance".  (The web page does give you 
+a good idea whether the script runs properly. Except for the first
+table, the others are deterministic.)
+
 
 ## Data Files 
 
